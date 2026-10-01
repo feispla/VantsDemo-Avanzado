@@ -71,7 +71,7 @@
       return q(client.from('leaderboard').select('*').eq('season_id', seasonId).order('mmr', { ascending: false }).limit(limit));
     }),
 
-    tournaments: () => cached('tournaments', () => q(client.from('tournaments').select('*').order('starts_at', { ascending: true, nullsFirst: false }))),
+    tournaments: () => cached('tournaments', () => q(client.from('tournaments').select('*').neq('status', 'draft').order('starts_at', { ascending: true, nullsFirst: false }))),
 
     tournament: (slug) => cached('t:' + slug, async () => {
       const t = await q(client.from('tournaments').select('*').eq('slug', slug).maybeSingle());
