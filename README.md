@@ -1,7 +1,7 @@
 
 # VANTS - Plataforma de Esports Premium
 
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](#-licencia)
 [![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL-3ECF8E?logo=supabase)](https://supabase.com)
 [![Discord](https://img.shields.io/badge/Discord-Bot-5865F2?logo=discord)](https://discord.com)
 
@@ -24,7 +24,7 @@ Plataforma competitiva de esports con autenticación multi-proveedor, pagos con 
   - BASIC: 9 € (IVA incluido)
   - PRO: 19 € (IVA incluido)
   - ELITE: 39 € (IVA incluido)
-- 🔔 Webhook automático → actualización de planes en tiempo real
+- 🔔 Webhook (desplegado aparte) → actualización de planes
 - 🎯 Zona VIP con contenido exclusivo por plan
 
 ### Torneos & Competición
@@ -49,33 +49,33 @@ Plataforma competitiva de esports con autenticación multi-proveedor, pagos con 
 ---
 
 ## 🏗️ Arquitectura
-VantsportsOficial/
-├── app/ # Frontend (Next.js/React)
-│ ├── admin.js # Panel de administración
-│ ├── zona.js # Zona VIP
-│ └── auth.js # Flujo OAuth PKCE
-├── bot/ # Bot de Discord (Python)
-│ ├── main.py # Gateway & comandos slash
-│ ├── cogs/ # Módulos del bot
-│ └── requirements.txt # Dependencias Python
-├── supabase/
-│ ├── functions/ # Edge Functions
-│ │ ├── stripe-webhook/
-│ │ ├── link-steam-start/
-│ │ ├── link-steam-callback/
-│ │ ├── unlink-steam/
-│ │ ├── discord-commands/
-│ │ ├── discord-admin/
-│ │ └── discord-notify/
-│ ├── schema.sql # Estructura de BD
-│ ├── seed.sql # Datos iniciales
-│ └── migrations/ # Migraciones
-├── assets/
-│ ├── brand/ # Logo, favicon, iconos
-│ └── ranks/ # 8 emblemas de rango premium
-└── docs/
-└── BRAND.md # Guía de marca
 
+```
+VantsportsOficial/
+├── index.html, app.js, auth.js, admin.js, zona.js, data.js, db.js, ranks.js, premium.js
+│                          # Frontend estático (HTML + JS vanilla + CSS), sin build
+├── *.css                  # Estilos (base, style, premium, vip)
+├── vendor/                # Librerías de terceros
+├── bot/                   # Bot de Discord (Python, discord.py)
+│   ├── main.py            # Cliente, comandos slash y arranque
+│   ├── commands/          # perfil.py, vincular.py
+│   ├── utils/             # health.py (healthcheck HTTP), supabase_client.py
+│   └── requirements.txt
+├── supabase/
+│   ├── functions/         # Edge Functions
+│   │   ├── steam-login/
+│   │   ├── discord-commands/
+│   │   ├── discord-admin/
+│   │   └── discord-notify/
+│   ├── schema.sql         # Estructura de BD
+│   ├── seed.sql           # Datos iniciales
+│   └── migrations/        # Migraciones
+├── config.toml            # verify_jwt de las Edge Functions públicas
+└── assets/
+    ├── brand/             # Logo, favicon, iconos
+    ├── ranks/             # 8 emblemas de rango premium
+    └── BRAND.md           # Guía de marca
+```
 
 ---
 
@@ -108,22 +108,28 @@ VantsportsOficial/
 
 ### Comandos Disponibles
 
+**Gateway (Python, `bot/main.py`)**
+
 | Comando | Descripción |
 |---------|-------------|
 | `/vincular riot` | Vincula cuenta de Riot Games al perfil |
-| `/perfil` | Muestra stats del jugador (torneos, rango, cuentas vinculadas) |
-| `/status` | Estado del bot (solo staff) |
-| `/connect` | Conecta el servidor con VANTS (guarda token en Vault) |
-| `/sync` | Sincroniza datos de torneos y jugadores |
-| `/announce` | Publica anuncios en canales configurados |
+| `/perfil` | Muestra el perfil VANTS del jugador |
+| `/valorant ranking` | Top 10 de Valorant |
+| `/valorant perfil` | Stats de Valorant de un jugador |
+| `/setup` | Configura los canales del servidor (solo administradores) |
+
+**HTTP Interactions (Edge Function `discord-commands`)**: `/ayuda`, `/zona`, `/web`, `/vincular`, `/perfil`, `/ranking`, `/torneos`, `/torneo inscribir`, `/eventos`, `/calendario`, `/planes` y los comandos de staff `/vants ...`. El catálogo se gestiona en la tabla `bot_commands`.
+
+**Panel admin web (Edge Function `discord-admin`)**: acciones `status`, `connect`, `sync` y `announce`, que requieren un usuario de `web_admins`. No son comandos slash.
 
 ### Implementación
 
-- **Gateway (Python):** `bot/main.py` con `discord.py`
+- **Gateway (Python):** `bot/main.py` con `discord.py`; expone `GET /` en `$PORT` como healthcheck
 - **HTTP Interactions (Edge Functions):** `discord-commands`, `discord-admin`, `discord-notify`
 - **Despliegue:** Railway/Render con variables de entorno:
   ```bash
   DISCORD_TOKEN=<tu_token>
+  DISCORD_GUILD_ID=<id_del_servidor>
   SUPABASE_URL=https://qtetsgwwsvqzquxssudj.supabase.co
   SUPABASE_SERVICE_ROLE_KEY=<service_role_key>
   ```
@@ -158,26 +164,17 @@ VantsportsOficial/
 
 ### Prerrequisitos
 
-- Node.js 18+
-- Python 3.10+
-- Supabase CLI (opcional)
+- Python 3.10+ (frontend y bot)
+- Node.js 18+ (solo para la Supabase CLI)
 
 ### Frontend
 
+Es un sitio estático: no hay `package.json` ni paso de build. Las claves de Supabase (URL y anon key) están en `db.js`.
+
 ```bash
-# Instalar dependencias
-npm install
-
-# Variables de entorno (.env.local)
-NEXT_PUBLIC_SUPABASE_URL=[https://qtetsgwwsvqzquxssudj.supabase.co](https://qtetsgwwsvqzquxssudj.supabase.co)
-NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon_key>
-
-# Desarrollo
-npm run dev
-
-# Producción
-npm run build
-npm run start
+# Servir en local
+python3 -m http.server 8080
+# Abrir http://localhost:8080
 ```
 
 ### Bot de Discord
@@ -209,12 +206,14 @@ supabase login
 # Link al proyecto
 supabase link --project-ref qtetsgwwsvqzquxssudj
 
-# Deploy de funciones
-supabase functions deploy stripe-webhook
-supabase functions deploy link-steam-start
+# Deploy de funciones (verify_jwt se toma de config.toml)
+supabase functions deploy steam-login
 supabase functions deploy discord-commands
-# ... etc
+supabase functions deploy discord-admin
+supabase functions deploy discord-notify
 ```
+
+> `stripe-webhook` no está en este repo. Los Payment Links de Stripe están en `auth.js`; la asignación automática de planes depende de un webhook que debe desplegarse aparte.
 
 ---
 
@@ -254,23 +253,24 @@ sequenceDiagram
 ### Esquema Base
 
 ```bash
-supabase/db/schema.sql      # Tablas principales
-supabase/db/seed.sql        # Datos iniciales
-supabase/db/admin.sql       # Configurar administradores
-supabase/db/owner.sql       # Configurar propietario
+supabase/schema.sql                                   # Tablas principales
+supabase/seed.sql                                     # Datos iniciales
+supabase/migrations/20261001_admin_bot_premium.sql    # Admins, bot y premium
+supabase/migrations/20261001_owner_identities.sql     # Propietario e identidades
 ```
 
 ### Ejecutar Migraciones
 
 ```bash
-# Conectar al proyecto
-psql -h db.qtetsgwwsvqzquxssudj.supabase.co -U postgres -d postgres
+# Con la CLI (recomendado)
+supabase db push
 
-# Ejecutar scripts
-\i schema.sql
-\i seed.sql
-\i admin.sql
-\i owner.sql
+# O manualmente con psql
+psql "postgresql://postgres:<password>@db.qtetsgwwsvqzquxssudj.supabase.co:5432/postgres" \
+  -f supabase/schema.sql \
+  -f supabase/seed.sql \
+  -f supabase/migrations/20261001_admin_bot_premium.sql \
+  -f supabase/migrations/20261001_owner_identities.sql
 ```
 
 ---
@@ -294,7 +294,7 @@ psql -h db.qtetsgwwsvqzquxssudj.supabase.co -U postgres -d postgres
 ### Webhook de Stripe no funciona
 
 - Verifica `STRIPE_WEBHOOK_SECRET` en Supabase Vault
-- Prueba el endpoint con [Stripe CLI](https://stripe.com/docs/stripe-cli):
+- Prueba el endpoint (desplegado aparte, ver sección Edge Functions) con [Stripe CLI](https://stripe.com/docs/stripe-cli):
   ```bash
   stripe listen --forward-to https://qtetsgwwsvqzquxssudj.supabase.co/functions/v1/stripe-webhook
   ```
@@ -303,7 +303,7 @@ psql -h db.qtetsgwwsvqzquxssudj.supabase.co -U postgres -d postgres
 
 ## 📄 Licencia
 
-MIT License - ver [LICENSE](LICENSE) para más detalles.
+MIT License.
 
 ---
 

@@ -1,5 +1,5 @@
 [functions.discord-commands]
 verify_jwt = false
 
-[functions.link-steam-callback]
+[functions.steam-login]
 verify_jwt = false
